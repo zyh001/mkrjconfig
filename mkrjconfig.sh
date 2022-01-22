@@ -109,7 +109,7 @@ function check_opt_file() {
             opt_file_name="${file_name}.csv"
             isxlsx=1
     elif [[ ${file_suffix,,} == csv ]]; then
-        return 0
+        unset isxlsx
     else
         echo "不被支持的文件，请检查文件"
         exit 1
