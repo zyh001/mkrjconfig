@@ -39,13 +39,13 @@ function replace_array_in_file() {
             for ((j=0;j<${#title[@]};j++))
             do
                 if [[ ! -z ${suffix} && ${title[${j}]} == "${suffix}" ]]; then
-                    if [[ -z ${output_file_dir} ]]; then
+                    if [[ -z ${output_dir_name} ]]; then
                         output_file_name="${optname[${j}]}"
                     else
-                        if [[ ! -d ${output_file_dir} ]]; then
-                            mkdir -p ${output_file_dir}
+                        if [[ ! -d ${output_dir_name} ]]; then
+                        mkdir -p ${output_dir_name}
                         fi
-                        output_file_name=${output_file_dir}/${optname[${j}]}
+                        output_file_name=${output_dir_name}/${optname[${j}]}
                     fi
                     if [[ -z ${suffix_index} ]]; then
                         output_file_name="${output_file_name}.out"
