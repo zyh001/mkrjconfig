@@ -52,9 +52,11 @@ function replace_array_in_file() {
                     else
                         output_file_name="${output_file_name}.${suffix_index}"
                     fi
+                    sed "s/%${title[${j}]}%/${optname[${j}]}/g" -i ${template_file_name}.tmp
                 else
                     sed "s/%${title[${j}]}%/${optname[${j}]}/g" -i ${template_file_name}.tmp
                 fi
+                
             done
             if [[ -z ${output_file_name} ]]; then
                 cat ${template_file_name}.tmp
@@ -69,6 +71,9 @@ function replace_array_in_file() {
                 cat ${template_file_name}.tmp >> ${output_file_name}
             fi
             rm -f ${template_file_name}.tmp
+        fi
+        if [[ ! -z ${nline} && $i == ${nline} ]]; then
+            break
         fi
     done < ${opt_file_name}
 }
@@ -149,6 +154,7 @@ function display_help() {
     echo "  -d, --output-dir           指定输出文件所在目录（不指定路径默认在当前目录下输出，仅在使用-s参数时有效）"
     echo "  -D, --disable-rewrite      如果输出文件已存在，则直接追加不覆盖"
     echo "  -s, --suffix               指定输出文件名称从参数文件中某列获取（默认为file_name列）"
+    echo "  -l, --line                 指定仅处理参数文件中的前几行（从1开始）"
     echo "  --suffix-index             指定输出文件名称后缀，必须与-s参数配合使用（默认为.out）"
     #echo "  -f, --format               以给定格式输出配置文件名称"
     echo "  --debug                    调试模式"
@@ -210,6 +216,14 @@ function parse_cmd_line() {
                     suffix_index="out"
                 else
                     suffix_index="$(parse_opt_equal_sign "$1" "$2")"
+                    [[ $? -eq 0 ]] && shift
+                fi
+                ;;
+            -l|--line|-l=*|--line=*)
+                if [[ -z ${2} || ${2} == -* ]]; then
+                    unset nline
+                else
+                    nline="$(parse_opt_equal_sign "$1" "$2")"
                     [[ $? -eq 0 ]] && shift
                 fi
                 ;;
