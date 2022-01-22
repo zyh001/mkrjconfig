@@ -97,6 +97,10 @@ function check_opt_file() {
                 sudo chmod +x ${The_Script_Dir}/xlsx2csv
             fi
             eval "${The_Script_Dir}/xlsx2csv ${opt_file_name} -o ${file_name}.csv"
+            if [[ $? != 0 ]]; then
+                echo "处理xlsx文件失败，请检查文件是否正确"
+                exit 1
+            fi
             opt_file_name="${file_name}.csv"
     elif [[ ${file_suffix,,} == csv ]]; then
         return 0
