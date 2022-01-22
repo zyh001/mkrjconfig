@@ -43,7 +43,7 @@ function replace_array_in_file() {
                         output_file_name="${optname[${j}]}"
                     else
                         if [[ ! -d ${output_dir_name} ]]; then
-                        mkdir -p ${output_dir_name}
+                            mkdir -p ${output_dir_name}
                         fi
                         output_file_name=${output_dir_name}/${optname[${j}]}
                     fi
