@@ -107,6 +107,7 @@ function check_opt_file() {
                 exit 1
             fi
             opt_file_name="${file_name}.csv"
+            isxlsx=1
     elif [[ ${file_suffix,,} == csv ]]; then
         return 0
     else
@@ -130,6 +131,9 @@ function check_opt_file() {
         fi
     done < ${opt_file_name}
     replace_array_in_file ${opt_file_name} ${template_file_name}
+    if [[ $isxlsx == 1 ]]; then
+        rm -f ${opt_file_name}
+    fi
 }
 function check_temp_file() {
     local temp_file_name=${1}
