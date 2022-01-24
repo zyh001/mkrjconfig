@@ -97,15 +97,7 @@ function check_opt_file() {
     local file_name=${opt_file_name%.*}
     # 若文件后缀名为xlsx，则转换为csv
     if [[ ${file_suffix,,} == xlsx ]]; then
-            # 检测是否有执行权限
-            if [[ ! -x ${The_Script_Dir}/xlsx2csv ]]; then
-                sudo chmod +x ${The_Script_Dir}/xlsx2csv
-            fi
-            eval "${The_Script_Dir}/xlsx2csv ${opt_file_name} -o ${file_name}.csv"
-            if [[ $? != 0 ]]; then
-                echo "处理xlsx文件失败，请检查文件是否正确"
-                exit 1
-            fi
+            transform_xlsx_to_csv ${opt_file_name} ${file_name}.csv
             opt_file_name="${file_name}.csv"
             isxlsx=1
     elif [[ ${file_suffix,,} == csv ]]; then
@@ -135,6 +127,42 @@ function check_opt_file() {
         rm -f ${opt_file_name}
     fi
 }
+function transform_xlsx_to_csv(){
+    local xlsx_file_name=${1}
+    local csv_file_name=${2}
+    if [[ ! -x ${The_Script_Dir}/xlsx2csv ]]; then
+        sudo chmod +x ${The_Script_Dir}/xlsx2csv
+    fi
+    if [[ ! -z ${sheet_name} ]]; then
+        eval "${The_Script_Dir}/xlsx2csv -n ${sheet_name} ${xlsx_file_name} ${csv_file_name}"
+        if [[ $? != 0 ]]; then
+            echo "xlsx文件可能损坏，请检查"
+            exit 1
+        fi
+        if [[ ! -s ${csv_file_name} ]]; then
+            rm -f ${csv_file_name}
+            echo "可能不存在该sheet，请检查是否拼写错误或者sheet名称是否正确"
+            exit 1
+        fi
+    elif [[ ! -z ${sheet_index} ]]; then
+        eval "${The_Script_Dir}/xlsx2csv -s ${sheet_index} ${xlsx_file_name} ${csv_file_name}"
+        if [[ $? != 0 ]]; then
+            echo "xlsx文件可能损坏，请检查"
+            exit 1
+        fi
+        if [[ ! -s ${csv_file_name} ]]; then
+            rm -f ${csv_file_name}
+            echo "可能不存在该sheet，请检查是否拼写错误或者sheet名称是否正确"
+            exit 1
+        fi
+    else
+        eval "${The_Script_Dir}/xlsx2csv ${xlsx_file_name} ${csv_file_name}"
+        if [[ $? != 0 ]]; then
+            echo "xlsx文件可能损坏，请检查"
+            exit 1
+        fi
+    fi
+}
 function check_temp_file() {
     local temp_file_name=${1}
     # 检查文件是否存在
@@ -159,6 +187,8 @@ function display_help() {
     echo "  -D, --disable-rewrite      如果输出文件已存在，则直接追加不覆盖"
     echo "  -s, --suffix               指定输出文件名称从参数文件中某列获取（默认为file_name列）"
     echo "  -l, --line                 指定仅处理参数文件中的前几行（从1开始）"
+    echo "  --sheet-name               指定xlsx文件中的sheet名称"
+    echo "  --sheet-index              指定xlsx文件中的sheet索引（从0开始）"
     echo "  --suffix-index             指定输出文件名称后缀，必须与-s参数配合使用（默认为.out）"
     #echo "  -f, --format               以给定格式输出配置文件名称"
     echo "  --debug                    调试模式"
@@ -228,6 +258,26 @@ function parse_cmd_line() {
                     unset nline
                 else
                     nline="$(parse_opt_equal_sign "$1" "$2")"
+                    [[ $? -eq 0 ]] && shift
+                fi
+                ;;
+            --sheet-name|--sheet-name=*)
+                if [[ -z ${2} || ${2} == -* ]]; then
+                    sheet_name="Sheet1"
+                else
+                    sheet_name="$(parse_opt_equal_sign "$1" "$2")"
+                    [[ $? -eq 0 ]] && shift
+                fi
+                ;;
+            --sheet-index|--sheet-index=*)
+                if [[ -z ${2} || ${2} == -* ]]; then
+                    sheet_index=0
+                else
+                    sheet_index="$(parse_opt_equal_sign "$1" "$2")"
+                    if [[ ! $sheet_index =~ ^[0-9]+$ ]]; then
+                        echo "sheet_index必须为数字"
+                        exit 1
+                    fi
                     [[ $? -eq 0 ]] && shift
                 fi
                 ;;
