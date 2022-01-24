@@ -3,6 +3,13 @@
 The_Script_Name="$(basename `readlink -f $0`)"
 The_Script_Dir="$(dirname `readlink -f $0`)"
 The_Script_Opts="$@"
+Remote_Host_Key="remote_host"
+Remote_User_Key="remote_user"
+Remote_Password_Key="remote_password"
+Remote_Enable_Password_Key="remote_enable_password"
+Remote_Port_Key="remote_port"
+Remote_Mode_Key="remote_mode"
+Hardware_Type_Key="hardware_type"
 # 读取文件的每一行，并存入数组
 # 参数1：文件名
 # 参数2：数组名
@@ -56,7 +63,29 @@ function replace_array_in_file() {
                 else
                     sed "s/%${title[${j}]}%/${optname[${j}]}/g" -i ${template_file_name}.tmp
                 fi
-                
+                if [[ ! -z ${auto_config} ]]; then
+                    if [[ ${title[${j}]} == ${Remote_Host_Key} ]]; then
+                        echo "${optname[${j}]}" >> /tmp/host.tmp
+                    fi
+                    if [[ ${title[${j}]} == ${Remote_User_Key} ]]; then
+                        echo "${optname[${j}]}" >> /tmp/user.tmp
+                    fi
+                    if [[ ${title[${j}]} == ${Remote_Password_Key} ]]; then
+                        echo "${optname[${j}]}" >> /tmp/password.tmp
+                    fi
+                    if [[ ${title[${j}]} == ${Remote_Enable_Password_Key} ]]; then
+                        echo "${optname[${j}]}" >> /tmp/enable_password.tmp
+                    fi
+                    if [[ ${title[${j}]} == ${Remote_Port_Key} ]]; then
+                        echo "${optname[${j}]}" >> /tmp/port.tmp
+                    fi
+                    if [[ ${title[${j}]} == ${Hardware_Type_Key} ]]; then
+                        echo "${optname[${j}]}" >> /tmp/hardware_type.tmp
+                    fi
+                    if [[ ${title[${j}]} == ${Remote_Mode_Key} ]]; then
+                        echo "${optname[${j}]}" >> /tmp/mode.tmp
+                    fi
+                fi
             done
             if [[ -z ${output_file_name} ]]; then
                 cat ${template_file_name}.tmp
@@ -70,12 +99,81 @@ function replace_array_in_file() {
             else
                 cat ${template_file_name}.tmp >> ${output_file_name}
             fi
-            rm -f ${template_file_name}.tmp
+            if [[ "${auto_config}" == "1" ]]; then
+                mv ${template_file_name}.tmp /tmp/config.tmp
+                run_auto_config
+            else
+                rm -f ${template_file_name}.tmp
+            fi
         fi
         if [[ ! -z ${nline} && $i == ${nline} ]]; then
             break
         fi
     done < ${opt_file_name}
+}
+run_ruijie_auto_config() {
+    local line
+    cp ${The_Script_Dir}/expect/ruijie.exp /tmp/ruijie.exp
+    while read line
+    do
+        echo "expect \"*#\" { send \"${line}\\r\" }" >> /tmp/ruijie.exp
+    done < /tmp/config.tmp
+    echo "expect \"*#\" { send \"end\\r\" }" >> /tmp/ruijie.exp
+    echo "expect \"*#\" { send \"write\\r\" }" >> /tmp/ruijie.exp
+    echo "expect \"*#\" { send \"exit\\r\" }" >> /tmp/ruijie.exp
+    echo "expect eof" >> /tmp/ruijie.exp
+    echo "exit" >> /tmp/ruijie.exp
+    chmod +x /tmp/ruijie.exp
+    /tmp/ruijie.exp ${remote_mode} ${remote_host} ${remote_user} ${remote_port} ${remote_enable_password} ${remote_host}> /dev/null 2>&1
+    rm -f /tmp/ruijie.exp
+}
+run_huawei_auto_config(){
+    local line
+    cp ${The_Script_Dir}/expect/huawei.exp /tmp/huawei.exp
+    while read line
+    do
+        echo "expect \"[*]\" { send \"${line}\\r\" }" >> /tmp/huawei.exp
+    done < /tmp/config.tmp
+    echo "expect \"[*]\" { send \"quit\\r\" }" >> /tmp/huawei.exp
+    echo "expect \"<*>\" { send \"save\\r\" }" >> /tmp/huawei.exp
+    echo "expect \"*[Y/N]*\" { send \"y\\r\" }" >> /tmp/huawei.exp
+    echo "expect \"<*>\" { send \"\\r\" }" >> /tmp/huawei.exp
+    echo "expect \"*[Y/N]*\" { send \"y\\r\" }" >> /tmp/huawei.exp
+    echo "expect eof" >> /tmp/huawei.exp
+    echo "exit" >> /tmp/huawei.exp
+    chmod +x /tmp/huawei.exp
+    /tmp/huawei.exp ${remote_mode} ${remote_host} ${remote_user} ${remote_port} ${remote_host}> /dev/null 2>&1
+    rm -f /tmp/huawei.exp
+}
+function run_auto_config() {
+    local line
+    local IFS=","
+    paste -d "," /tmp/host.tmp /tmp/user.tmp /tmp/password.tmp /tmp/enable_password.tmp /tmp/port.tmp /tmp/hardware_type.tmp /tmp/mode.tmp > /tmp/tag.tmp
+    rm -f /tmp/host.tmp /tmp/user.tmp /tmp/password.tmp /tmp/enable_password.tmp /tmp/port.tmp /tmp/hardware_type.tmp /tmp/mode.tmp
+    while read line
+    do
+        remote_host=`echo ${line} | cut -d "," -f 1`
+        remote_user=`echo ${line} | cut -d "," -f 2`
+        remote_password=`echo ${line} | cut -d "," -f 3`
+        remote_enable_password=`echo ${line} | cut -d "," -f 4`
+        remote_port=`echo ${line} | cut -d "," -f 5`
+        hardware_type=`echo ${line} | cut -d "," -f 6`
+        remote_mode=`echo ${line} | cut -d "," -f 7`
+        if [[ ${remote_mode,,} == "ssh" && -z ${remote_port} ]]; then
+            remote_port=22
+        elif [[ ${remote_mode,,} == "telnet" && ${remote_port} ]]; then
+            remote_port=23
+        fi
+        if [[ -z ${remote_enable_password} ]]; then
+            remote_enable_password=${remote_password}
+        fi
+        if [[ ${hardware_type,,} == "ruijie" ]]; then
+            run_ruijie_auto_config
+        elif [[ ${hardware_type,,} == "huawei" ]]; then
+            run_huawei_auto_config
+        fi
+    done < /tmp/tag.tmp
+    rm -f /tmp/tag.tmp
 }
 function check_opt_file() {
     opt_file_name=${1}
@@ -177,6 +275,19 @@ function check_temp_file() {
         exit 1
     fi
 }
+function check_expect() {
+    if ! type -p expect &>/dev/null; then
+        echo "第一次执行缺少expect，开始安装，可能需要输入密码"
+        #检测操作系统
+        if [[ -f /etc/redhat-release ]]; then
+            sudo yum install -y expect
+        elif [[ -f /etc/debian_version ]]; then
+            sudo apt-get install -y expect
+        else
+            echo "不支持的操作系统"
+            exit 1
+        fi
+}
 function display_help() {
     echo "用法: $0 [参数]"
     echo "  -h, --help                 输出帮助信息"
@@ -185,12 +296,12 @@ function display_help() {
     echo "  -O, --output-file          指定输出文件（不指定路径默认在当前目录下输出./config.out）"
     echo "  -d, --output-dir           指定输出文件所在目录（不指定路径默认在当前目录下输出，仅在使用-s参数时有效）"
     echo "  -D, --disable-rewrite      如果输出文件已存在，则直接追加不覆盖"
-    echo "  -s, --suffix               指定输出文件名称从参数文件中某列获取（默认为file_name列）"
+    echo "  -s, --suffix               指定输出文件名称从参数文件中某列获取，默认为file_name列"
     echo "  -l, --line                 指定仅处理参数文件中的前几行（从1开始）"
-    echo "  --sheet-name               指定xlsx文件中的sheet名称"
-    echo "  --sheet-index              指定xlsx文件中的sheet索引（从0开始）"
-    echo "  --suffix-index             指定输出文件名称后缀，必须与-s参数配合使用（默认为.out）"
-    #echo "  -f, --format               以给定格式输出配置文件名称"
+    echo "  --sheet-name               指定xlsx文件中的sheet名称，默认为第一个sheet"
+    echo "  --sheet-index              指定xlsx文件中的sheet索引（从0开始），默认为第一个sheet"
+    echo "  --suffix-index             指定输出文件名称后缀，必须与-s参数配合使用，默认为out"
+    echo "  --auto-config              自动进行远程批量配置"
     echo "  --debug                    调试模式"
     exit 0
 }
@@ -293,6 +404,9 @@ function parse_cmd_line() {
             -f|--format|-f=*|--format=*)
                 format="$(parse_opt_equal_sign "$1" "$2")"
                 [[ $? -eq 0 ]] && shift
+                ;;
+            --auto-config)
+                auto_config=1
                 ;;
             *)
                 echo "错误，未定义的命令 $1"

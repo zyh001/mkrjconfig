@@ -1,0 +1,23 @@
+#!/usr/bin/env expect
+set timeout 5
+set mode [lindex $argv 0]
+set ip [lindex $argv 1]
+set user [lindex $argv 2]
+set port [lindex $argv 3]
+set pass [lindex $argv 4]
+set des [lindex $argv 5]
+
+log_file $des.[clock format {%Y%m%d%H%M%S}].log
+if {$mode == "ssh"} {
+    spawn ssh -p $port $user@$ip
+} else {
+    spawn telnet $ip $port
+}
+expect {
+    "*yes/no*" { send "yes\r"; exp_continue }
+    "*assword*" { send "$pass\r" }
+}
+expect "<*>" { send "screen-length 0\r" }
+expect "<*>" { send "system-view\r" }
+expect "[*]" { send "\r" }
+
