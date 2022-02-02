@@ -197,6 +197,7 @@ function deal_file_line() {
             cd ${TEMP_PATH}/${TODAY_DATE}
             zip -r ${TODAY_DATE}.zip *
             mv ./${TODAY_DATE}.zip ${BAK_PATH}/${TODAY_DATE}.zip
+            rm -rf ${TEMP_PATH}/${TODAY_DATE}
             cd -
         fi
     else
@@ -227,7 +228,11 @@ if [[ -f ${1} ]]; then
         exit 1
     fi
 fi
+if [[ ! -d ${TEMP_PATH} ]]; then
+    mkdir -p ${TEMP_PATH}
+fi
 if [[ -f ${opt_file_name} ]]; then
+    deal_exp
     deal_file_line ${opt_file_name}
 else
     echo "文件不存在"
