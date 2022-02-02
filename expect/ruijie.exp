@@ -8,7 +8,7 @@ set pass [lindex $argv 4]
 set enpass [lindex $argv 5]
 set des [lindex $argv 6]
 
-log_file $des.[clock format {%Y%m%d%H%M%S}].log
+log_file $des.log
 if {$mode == "ssh"} {
     spawn ssh -p $port $user@$ip
 } else {
@@ -18,8 +18,11 @@ expect {
     "*yes/no*" { send "yes\r"; exp_continue }
     "*assword*" { send "$pass\r" }
 }
-expect "*>" { send "enable\r" }
-expect { undefined 
+expect {
+    "*>" { send "enable\r" }
+    "*#" { send "\r" }
+}
+expect {
     "*assword*" { send "$enpass\r" }
     "*#" { send "terminal length 0\r" }
 } 
