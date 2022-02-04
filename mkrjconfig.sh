@@ -178,7 +178,7 @@ function check_temp_file() {
     fi
 }
 function display_help() {
-    echo "用法: $0 [参数]"
+    echo "用法: $(basename $0) [参数]"
     echo "  -h, --help                 输出帮助信息"
     echo "  -o, --opt-file             指定参数文件（可支持xlsx，csv格式的文件）"
     echo "  -t, --template-file        指定模板文件"
@@ -214,11 +214,11 @@ function parse_cmd_line() {
                 display_help
                 ;;
             -o|--opt-file|-o=*|--opt-file=*)
-                opt_file_name="$(parse_opt_equal_sign "$1" "$2")"
+                opt_file_name="`readlink -f $(parse_opt_equal_sign "$1" "$2")`"
                 [[ $? -eq 0 ]] && shift
                 ;;
             -t|--template-file|-t=*|--template-file=*)
-                template_file_name="$(parse_opt_equal_sign "$1" "$2")"
+                template_file_name="`readlink -f $(parse_opt_equal_sign "$1" "$2")`"
                 [[ $? -eq 0 ]] && shift
                 ;;
             -O|--output-file|-O=*|--output-file=*)
