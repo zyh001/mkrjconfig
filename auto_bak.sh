@@ -26,10 +26,6 @@ function first_run(){
     if [[ ! -d $TEMP_PATH ]]; then
         mkdir -p $TEMP_PATH
     fi
-    # 创建备份目录
-    if [[ ! -d $BAK_PATH ]]; then
-        mkdir -p $BAK_PATH
-    fi
     # 检测expect是否安装
     if type expect >/dev/null 2>&1; then
         echo "expect已安装"
@@ -99,6 +95,7 @@ function main(){
         if [[ ${file_suffix,,} != "csv" ]]; then
             ${The_Script_Dir}/xlsx2csv list ${INPUT_FILE} > /tmp/sheet.txt
             while :;do
+                i=0
                 while read line 
                 do
                     echo "${i}、${line}" >> /tmp/sheet.tmp
@@ -106,7 +103,10 @@ function main(){
                 done < /tmp/sheet.txt
                 cat /tmp/sheet.tmp
                 read -rp "请选择表格sheet(输入对应sheet前的数字)[0~$((i-1))]：" -e -i "0" INPUT_SHEET
-                if [[ $INPUT_SHEET -ge 0 && $INPUT_SHEET -lt $((i-1)) ]]; then
+                if [[ $INPUT_SHEET == 0 ]]; then
+                    rm -f /tmp/sheet.txt
+                    break
+                elif [[ $INPUT_SHEET -ge 0 && $INPUT_SHEET -lt $((i-1)) ]]; then
                     rm -f /tmp/sheet.txt
                     break
                 else
@@ -271,7 +271,7 @@ function main(){
         echo "远程enable密码列：$(if [ -z ${Remote_Enable_Password_Key} ]; then echo "${Remote_Pass_Key}"; else echo "${Remote_Enable_Password_Key}"; fi )"
         echo
         read -rp "是否确认？[Y/n]：" -e -n 1 yn
-        if [[ ${INPUT} == [Yy] || -z ${yn} ]]; then
+        if [[ ${yn} == [Yy] || -z ${yn} ]]; then
             echo "INPUT_FILE=${INPUT_FILE}" >> ~/.config_autobak.conf
             echo "INPUT_SHEET=${INPUT_SHEET}" >> ~/.config_autobak.conf
             echo "BAK_PATH=$(readlink -f $BAK_PATH)" >> ~/.config_autobak.conf
@@ -368,6 +368,9 @@ function deal_file_line(){
     local i=0
     local j=0
     local IFS=","
+    if test ! -d ${TEMP_PATH}; then
+        mkdir -p ${TEMP_PATH}
+    fi
     while read line 
     do
         i=$(($i+1))
@@ -378,17 +381,17 @@ function deal_file_line(){
             for ((j=0;j<${#title[@]};j++))
             do
                 if [[ ${title[$j]} == "${Remote_Host_Key}" ]]; then
-                    remote_ip = ${data[$j]}
+                    remote_ip="${data[$j]}"
                 elif [[ ${title[$j]} == "${Remote_User_Key}" ]]; then
-                    remote_user = ${data[$j]}
+                    remote_user="${data[$j]}"
                 elif [[ ${title[$j]} == "${Remote_Pass_Key}" ]]; then
-                    remote_passwd = ${data[$j]}
+                    remote_passwd="${data[$j]}"
                 elif [[ ${title[$j]} == "${Remote_Mode_Key}" ]]; then
-                    remote_type = ${data[$j]}
+                    remote_type="${data[$j]}"
                 elif [[ ${title[$j]} == "${Remote_Port_Key}" ]]; then
-                    remote_port = ${data[$j]}
+                    remote_port="${data[$j]}"
                 elif [[ ${title[$j]} == "${emote_Enable_Password_Key}" ]]; then
-                    remote_enable = ${data[$j]}
+                    remote_enable="${data[$j]}"
                 fi
             done
             if [[ -z ${remote_ip} ]]; then
@@ -418,8 +421,9 @@ function deal_file_line(){
                 remote_port="22"
             fi
         fi
-        if test ! ping -c 1 -w 1 ${remote_ip} &>/dev/null; then
-            echo "第${i}行IP-${romote_ip}不可达"
+        ping -c 1 -w 1 ${remote_ip} &>/dev/null
+        if [[ $? != 0 ]]; then
+            echo "第${i}行IP-${remote_ip}不可达"
             continue
         fi
         ${TEMP_PATH}/ruijie.exp ${remote_type} ${remote_ip} ${remote_user} ${remote_port} ${remote_passwd} ${remote_enable} tmp 1>/dev/null 2>&1
