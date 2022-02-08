@@ -17,7 +17,7 @@ function first_run(){
     # 检测操作系统
     if [[ -f /etc/redhat-release ]]; then
         OS_TYPE="centos"
-    elif [[ -f /etc/debian ]]; then
+    elif [[ -f /etc/debian_version ]]; then
         OS_TYPE="ubuntu"
     else
         echo "未知操作系统, 可能不被支持" && exit 1
@@ -97,16 +97,17 @@ function main(){
             fi
         done
         if [[ ${file_suffix,,} != "csv" ]]; then
+            ${The_Script_Dir}/xlsx2csv list ${INPUT_FILE} > /tmp/sheet.txt
             while :;do
                 while read line 
                 do
                     echo "${i}、${line}" >> /tmp/sheet.tmp
                     ((i++))
-                done < $(${The_Script_Dir}/xlsx2csv list ${INPUT_FILE})
+                done < /tmp/sheet.txt
                 cat /tmp/sheet.tmp
-                read -rp "请选择表格sheet(输入对应sheet前的数字)[0~${i}]：" -e -i "0" INPUT_SHEET
-                if [[ $INPUT_SHEET -ge 0 && $INPUT_SHEET -lt $i ]]; then
-                    echo "INPUT_SHEET=$INPUT_SHEET"
+                read -rp "请选择表格sheet(输入对应sheet前的数字)[0~$((i-1))]：" -e -i "0" INPUT_SHEET
+                if [[ $INPUT_SHEET -ge 0 && $INPUT_SHEET -lt $((i-1)) ]]; then
+                    rm -f /tmp/sheet.txt
                     break
                 else
                     echo -e "输入错误, 请输入0~${i}范围内的数字！\n"
@@ -121,14 +122,12 @@ function main(){
                 if [[ ! -d $BAK_PATH ]]; then
                     mkdir -p $(readlink -f $BAK_PATH)
                 fi
-                echo "BAK_PATH=$(readlink -f $BAK_PATH)" >> ~/.config_autobak.conf
                 break
             fi
         done
         while :;do
             read -rp "请输入是否需要在备份后自动压缩(true/false): " -e -i "true" AUTO_COM
             if [[ $AUTO_COM == "true" ]] || [[ $AUTO_COM == "false" ]]; then
-                echo "AUTO_COM=${AUTO_COM}" >> ~/.config_autobak.conf
                 break
             else
                 echo -e "输入错误, 请输入true或false\n"
@@ -170,7 +169,7 @@ function main(){
             fi
         done
         i=1
-        for line in $(cat /tmp/tmp.csv); do
+        for line in $(head -n 1 /tmp/tmp.csv); do
                 echo "${i}、${line}" >> /tmp/tmp.txt
                 ((i++))
         done
@@ -178,12 +177,12 @@ function main(){
             while :;do
                 cat /tmp/tmp.txt
                 echo "IP列不存在, 该列为必填项"
-                read -rp "请选择IP列(输入对应列前的序号[1~${i}])：" -e INPUT
-                if [[ $INPUT -ge 1 && $INPUT_SHEET -lt $i ]]; then
+                read -rp "请选择IP列(输入对应列前的序号[1~$((i-1))])：" -e INPUT
+                if [[ $INPUT -ge 1 && $INPUT -lt $((i-1)) ]]; then
                     Remote_Host_Key=$(sed -n "${INPUT}p" /tmp/tmp.txt|awk -F'、' '{print $2}')
                     break
                 else
-                    echo -e "输入错误, 请输入0~${i}范围内的数字！请重新输入！\n"
+                    echo -e "输入错误, 请输入1~$((i-1))范围内的数字！请重新输入！\n"
                 fi
             done
         fi
@@ -191,14 +190,14 @@ function main(){
             while :;do
                 cat /tmp/tmp.txt
                 echo "用户名列不存在, 该列选填"
-                read -rp "请选择用户名列(输入对应列前的序号[1~${i}])：" -e INPUT
-                if [[ $INPUT -ge 1 && $INPUT_SHEET -lt $i ]]; then
+                read -rp "请选择用户名列(输入对应列前的序号[1~$((i-1))])：" -e INPUT
+                if [[ $INPUT -ge 1 && $INPUT -lt $((i-1)) ]]; then
                     Remote_User_Key=$(sed -n "${INPUT}p" /tmp/tmp.txt|awk -F'、' '{print $2}')
                     break
                 elif [[ -z ${INPUT} ]]; then
                     break
                 else
-                    echo -e "输入错误, 请输入0~${i}范围内的数字！请重新输入！\n"
+                    echo -e "输入错误, 请输入1~$((i-1))范围内的数字！请重新输入！\n"
                 fi
             done
         fi
@@ -206,12 +205,12 @@ function main(){
             while :;do
                 cat /tmp/tmp.txt
                 echo "密码列不存在, 该列必填"
-                read -rp "请选择密码列(输入对应列前的序号[1~${i}])：" -e INPUT
-                if [[ $INPUT -ge 1 && $INPUT_SHEET -lt $i ]]; then
+                read -rp "请选择密码列(输入对应列前的序号[1~$((i-1))])：" -e INPUT
+                if [[ $INPUT -ge 1 && $INPUT -lt $((i-1)) ]]; then
                     Remote_Pass_Key=$(sed -n "${INPUT}p" /tmp/tmp.txt|awk -F'、' '{print $2}')
                     break
                 else
-                    echo -e "输入错误, 请输入0~${i}范围内的数字！请重新输入！\n"
+                    echo -e "输入错误, 请输入1~$((i-1))范围内的数字！请重新输入！\n"
                 fi
             done
         fi
@@ -219,14 +218,14 @@ function main(){
             while :;do
                 cat /tmp/tmp.txt
                 echo "enable密码列不存在, 该列选填, 默认同密码列"
-                read -rp "请选择enable密码列(输入对应列前的序号[1~${i}])：" -e INPUT
-                if [[ $INPUT -ge 1 && $INPUT_SHEET -lt $i ]]; then
+                read -rp "请选择enable密码列(输入对应列前的序号[1~$((i-1))])：" -e INPUT
+                if [[ $INPUT -ge 1 && $INPUT -lt $((i-1)) ]]; then
                     Remote_Enable_Password_Key=$(sed -n "${INPUT}p" /tmp/tmp.txt|awk -F'、' '{print $2}')
                     break
                 elif [[ -z ${INPUT} ]]; then
                     break
                 else
-                    echo -e "输入错误, 请输入0~${i}范围内的数字！请重新输入！\n"
+                    echo -e "输入错误, 请输入1~$((i-1))范围内的数字！请重新输入！\n"
                 fi
             done
         fi
@@ -234,14 +233,14 @@ function main(){
             while :;do
                 cat /tmp/tmp.txt
                 echo "远程连接方式列不存在, 该列选填, 默认为telnet"
-                read -rp "请选择远程连接方式列(输入对应列前的序号[1~${i}])：" -e INPUT
-                if [[ $INPUT -ge 1 && $INPUT_SHEET -lt $i ]]; then
+                read -rp "请选择远程连接方式列(输入对应列前的序号[1~$((i-1))])：" -e INPUT
+                if [[ $INPUT -ge 1 && $INPUT -lt $((i-1)) ]]; then
                     Remote_Mode_Key=$(sed -n "${INPUT}p" /tmp/tmp.txt|awk -F'、' '{print $2}')
                     break
                 elif [[ -z ${INPUT} ]]; then
                     break
                 else
-                    echo -e "输入错误, 请输入0~${i}范围内的数字！请重新输入！\n"
+                    echo -e "输入错误, 请输入1~$((i-1))范围内的数字！请重新输入！\n"
                 fi
             done
         fi
@@ -249,21 +248,20 @@ function main(){
             while :;do
                 cat /tmp/tmp.txt
                 echo "端口列不存在, 该列选填, 默认为23"
-                read -rp "请选择端口列(输入对应列前的序号[1~${i}])：" -e INPUT
-                if [[ $INPUT -ge 1 && $INPUT_SHEET -lt $i ]]; then
+                read -rp "请选择端口列(输入对应列前的序号[1~$((i-1))])：" -e INPUT
+                if [[ $INPUT -ge 1 && $INPUT -lt $((i-1)) ]]; then
                     Remote_Port_Key=$(sed -n "${INPUT}p" /tmp/tmp.txt|awk -F'、' '{print $2}')
                     break
                 elif [[ -z ${INPUT} ]]; then
                     break
                 else
-                    echo -e "输入错误, 请输入0~${i}范围内的数字！请重新输入！\n"
+                    echo -e "输入错误, 请输入1~$((i-1))范围内的数字！请重新输入！\n"
                 fi
             done
         fi
-        rm -f /tmp/tmp.txt /tmp/tmp.csv 
         echo "信息收集完毕，请确认！"
         echo "xlsx文件位置：${INPUT_FILE}"
-        echo "xlsx sheet：$(sed -n "${INPUT_SHEET}p" /tmp/sheet.tmp |awk -F'、' '{print $2}')"
+        echo "xlsx sheet：$(sed -n "$((INPUT_SHEET+1))p" /tmp/sheet.tmp |awk -F'、' '{print $2}')"
         echo "备份文件路径：${BAK_PATH}"
         echo "是否需要备份后自动压缩：${AUTO_COM}"
         echo "备份时间段：${CRON_TIME}"
@@ -276,7 +274,7 @@ function main(){
         if [[ ${INPUT} == [Yy] || -z ${yn} ]]; then
             echo "INPUT_FILE=${INPUT_FILE}" >> ~/.config_autobak.conf
             echo "INPUT_SHEET=${INPUT_SHEET}" >> ~/.config_autobak.conf
-            echo "BAK_PATH=${BAK_PATH}" >> ~/.config_autobak.conf
+            echo "BAK_PATH=$(readlink -f $BAK_PATH)" >> ~/.config_autobak.conf
             echo "AUTO_COM=${AUTO_COM}" >> ~/.config_autobak.conf
             echo "CRON_TIME=\"${CRON_TIME}\"" >> ~/.config_autobak.conf
             echo "Remote_Host_Key=${Remote_Host_Key}" >> ~/.config_autobak.conf
@@ -286,13 +284,16 @@ function main(){
             echo "Remote_Mode_Key=${Remote_Mode_Key}" >> ~/.config_autobak.conf
             echo "Remote_Port_Key=${Remote_Port_Key}" >> ~/.config_autobak.conf
             echo "设置完毕！"
-            rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp
+            rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
         else
+            rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
             exit 0
         fi
     else
         source ~/.config_autobak.conf
-        transform_xlsx_to_csv ${INPUT_FILE} ${TEMP_PATH}/data.csv
+        if [[ ${file_suffix,,} != "csv" ]]; then
+            transform_xlsx_to_csv ${INPUT_FILE} ${TEMP_PATH}/data.csv
+        fi
         deal_exp
         deal_file_line ${TEMP_PATH}/data.csv
     fi
@@ -392,7 +393,7 @@ function deal_file_line(){
             done
             if [[ -z ${remote_ip} ]]; then
                 echo "第${i}行IP为空"
-                exit 1
+                continue
             fi
             if [[ -z ${remote_user} ]]; then
                 remote_user="admin"
@@ -417,10 +418,14 @@ function deal_file_line(){
                 remote_port="22"
             fi
         fi
+        if test ! ping -c 1 -w 1 ${remote_ip} &>/dev/null; then
+            echo "第${i}行IP-${romote_ip}不可达"
+            continue
+        fi
         ${TEMP_PATH}/ruijie.exp ${remote_type} ${remote_ip} ${remote_user} ${remote_port} ${remote_passwd} ${remote_enable} tmp 1>/dev/null 2>&1
         if [[ $? != 0 ]]; then
             echo "第${i}行连接失败"
-            exit 1
+            continue
         fi
         mv tmp.log ${TEMP_PATH}/ruijie.log
         hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | grep -v "hostname ")
@@ -430,7 +435,7 @@ function deal_file_line(){
         if [[ ! -d ${TEMP_PATH}/${TODAY_DATE} ]]; then
             mkdir -p ${TEMP_PATH}/${TODAY_DATE}
         fi
-        cat ${TEMP_PATH}/ruijie.log | sed -n '/^version/,/end$/p' >> ${TEMP_PATH}/${TODAY_DATE}/${hostname}(${remote_ip}).text
+        cat ${TEMP_PATH}/ruijie.log | sed -n '/^version/,/end$/p' >> "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
     done < ${file_name}
     if [[ "${AUTO_COM}" == "true" ]]; then
         if [[ -d ${TEMP_PATH}/${TODAY_DATE} ]]; then
@@ -447,34 +452,6 @@ function deal_file_line(){
 
 if [[ -f ~/.config_autobak.conf ]]; then
     source ~/.config_autobak.conf
-else
-    echo "" > ~/.config_autobak.conf
-    first_run
 fi
-if [[ -f ${1} ]]; then
-    # 获取文件后缀名
-    file_suffix=${1##*.}
-    # 获取文件名
-    filename=${1%.*}
-    # 若文件后缀名为xlsx，则转换为csv
-    if [[ ${file_suffix,,} == xlsx ]]; then
-        transform_xlsx_to_csv ${1} ${filename}.csv
-        opt_file_name="${filename}.csv"
-    elif [[ ${file_suffix,,} == csv ]]; then
-        unset isxlsx
-        opt_file_name="${1}"
-    else
-        echo "不被支持的文件，请检查文件"
-        exit 1
-    fi
-fi
-if [[ ! -d ${TEMP_PATH} ]]; then
-    mkdir -p ${TEMP_PATH}
-fi
-if [[ -f ${opt_file_name} ]]; then
-    deal_exp
-    deal_file_line ${opt_file_name}
-else
-    echo "文件不存在"
-    exit 1
-fi
+main ${1}
+exit 0
