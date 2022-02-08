@@ -287,6 +287,7 @@ function check_expect() {
             echo "不支持的操作系统"
             exit 1
         fi
+    fi
 }
 function display_help() {
     echo "用法: $0 [参数]"
