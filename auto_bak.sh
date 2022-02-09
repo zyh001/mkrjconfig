@@ -76,14 +76,16 @@ function main(){
                 break
             fi
             # 若文件后缀名为xlsx，则转换为csv
-            if [[ ${file_suffix,,} != xlsx ]]; then
+            if [[ ${file_suffix,,} == xlsx ]]; then
+                break
+            else
                 echo "不被支持的文件，请检查文件"
                 exit 1
             fi
             if [[ ! -x ${The_Script_Dir}/xlsx2csv ]]; then
                 sudo chmod +x ${The_Script_Dir}/xlsx2csv
             fi
-            ${The_Script_Dir}/xlsx2csv ${INPUT_FILE} 2&>1 >/dev/null
+            ${The_Script_Dir}/xlsx2csv ${INPUT_FILE} >/dev/null 2>&1
             if [[ $? != 0 ]]; then
                 echo "文件校验失败，可能损坏，请检查文件"
                 exit 1
@@ -271,7 +273,7 @@ function main(){
         echo
         read -rp "是否确认？[Y/n]：" -e -n 1 yn
         if [[ ${yn} == [Yy] || -z ${yn} ]]; then
-            echo "INPUT_FILE=${INPUT_FILE}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "INPUT_FILE=$(readlink -f ${INPUT_FILE})" >> ${HOMEDIR}/.config_autobak.conf
             echo "INPUT_SHEET=${INPUT_SHEET}" >> ${HOMEDIR}/.config_autobak.conf
             echo "BAK_PATH=$(readlink -f $BAK_PATH)" >> ${HOMEDIR}/.config_autobak.conf
             echo "AUTO_COM=${AUTO_COM}" >> ${HOMEDIR}/.config_autobak.conf
@@ -285,12 +287,21 @@ function main(){
             echo "设置完毕！"
             chmod a+r ${HOMEDIR}/.config_autobak.conf
             rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
+            echo "按回车键，将自动进行第一次备份工作，您也可以通过Ctrl-C结束运行，系统将在指定的时间自动进行备份！"
+            read -s 
+            main
+            exit 0
         else
             rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
             exit 0
         fi
     else
         source ${HOMEDIR}/.config_autobak.conf
+        if test -d ${TEMP_PATH}; then
+            rm -rf ${TEMP_PATH}/*
+        else
+            mkdir -p ${TEMP_PATH}
+        fi
         file_suffix=${INPUT_FILE##*.}
         if [[ ${file_suffix,,} != "csv" ]]; then
             transform_xlsx_to_csv ${INPUT_FILE} ${TEMP_PATH}/data.csv
@@ -300,7 +311,6 @@ function main(){
         deal_exp
         deal_file_line ${TEMP_PATH}/data.csv
     fi
-    
 }
 # 转化目标文件为csv格式
 function transform_xlsx_to_csv(){
@@ -371,11 +381,6 @@ function deal_file_line(){
     local i=0
     local j=0
     local IFS=","
-    if test -d ${TEMP_PATH}; then
-        rm -rf ${TEMP_PATH}/*
-    else
-        mkdir -p ${TEMP_PATH}
-    fi
     while read line 
     do
         i=$(($i+1))
@@ -425,26 +430,27 @@ function deal_file_line(){
             if [[ -z ${remote_port} && ${remote_type,,} == "ssh" ]]; then
                 remote_port="22"
             fi
+            ping -c 1 -w 1 ${remote_ip} &>/dev/null
+            if [[ $? != 0 ]]; then
+                echo "第$((i-1))行IP-${remote_ip}不可达"
+                continue
+            fi
+            ${TEMP_PATH}/ruijie.exp ${remote_type} ${remote_ip} ${remote_user} ${remote_port} ${remote_passwd} ${remote_enable} tmp 1>/dev/null 2>&1
+            if [[ $? != 0 ]]; then
+                echo "第$((i-1))行IP-${remote_ip}连接失败"
+                continue
+            fi
+            mv tmp.log ${TEMP_PATH}/ruijie.log
+            hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | awk -F' ' '{print $2}')
+            if [[ -z ${hostname} ]]; then
+                hostname="ruijie"
+            fi
+            if [[ ! -d ${TEMP_PATH}/${TODAY_DATE} ]]; then
+                mkdir -p ${TEMP_PATH}/${TODAY_DATE}
+            fi
+            cat ${TEMP_PATH}/ruijie.log | sed -n '/^version/,/end$/p' >> "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
+            echo "第$((i-1))行IP-${remote_ip}[${hostname}]备份成功"
         fi
-        ping -c 1 -w 1 ${remote_ip} &>/dev/null
-        if [[ $? != 0 && $i != 1 ]]; then
-            echo "第${i}行IP-${remote_ip}不可达"
-            continue
-        fi
-        ${TEMP_PATH}/ruijie.exp ${remote_type} ${remote_ip} ${remote_user} ${remote_port} ${remote_passwd} ${remote_enable} tmp 1>/dev/null 2>&1
-        if [[ $? != 0 && $i != 1 ]]; then
-            echo "第${i}行连接失败"
-            continue
-        fi
-        mv tmp.log ${TEMP_PATH}/ruijie.log
-        hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | awk -F' ' '{print $2}')
-        if [[ -z ${hostname} ]]; then
-            hostname="ruijie"
-        fi
-        if [[ ! -d ${TEMP_PATH}/${TODAY_DATE} ]]; then
-            mkdir -p ${TEMP_PATH}/${TODAY_DATE}
-        fi
-        cat ${TEMP_PATH}/ruijie.log | sed -n '/^version/,/end$/p' >> "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
     done < ${file_name}
     if [[ "${AUTO_COM}" == "true" ]]; then
         if [[ -d ${TEMP_PATH}/${TODAY_DATE} ]]; then
@@ -462,14 +468,14 @@ deal_crond(){
     if [[ ! -z ${CRON_TIME} ]]; then
         crontab -l 2>/dev/null > ${TEMP_PATH}/crontab.txt
         grep "bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
-        if test -z cat ${TEMP_PATH}/crontab.tmp; then
+        if [[ -z $(cat ${TEMP_PATH}/crontab.tmp) ]]; then
             echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" 
             (crontab -l 2>/dev/null; echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}") | crontab -
         else
-            grep -v "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
+            grep -v "${CRON_TIME/\*/\\\*} bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
             echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" >> ${TEMP_PATH}/crontab.tmp
             crontab -r
-            crontab ${TEMP_PATH}/crontab.tmp
+            crontab ${TEMP_PATH}/crontab.tmp >/dev/null 2>&1
         fi
         rm -f ${TEMP_PATH}/crontab.txt ${TEMP_PATH}/crontab.tmp
     fi
