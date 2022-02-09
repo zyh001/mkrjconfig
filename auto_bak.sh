@@ -452,7 +452,7 @@ function deal_file_line(){
                 mkdir -p ${TEMP_PATH}/${TODAY_DATE}
             fi
             hostname=$(echo ${hostname} | sed 's/\n//g')
-            cat ${TEMP_PATH}/ruijie.log | sed -n '/^version/,/end$/p' >> "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
+            cat ${TEMP_PATH}/ruijie.log | sed -n '/^version/,/^end/p' >> "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
             sed -i 's/\r//g' "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
             echo "第$((i-1))行IP-${remote_ip}[${hostname}]备份成功"
         fi
