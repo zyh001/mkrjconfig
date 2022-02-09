@@ -4,7 +4,7 @@
 The_Script_Name="$(basename `readlink -f $0`)"
 The_Script_Dir="$(dirname `readlink -f $0`)"
 The_Script_Version="1.0"
-
+HOMEDIR=${HOME}
 # 模板文件
 REMOTE_TEMPORARY_FILE="$(dirname `readlink -f $0`)/expect/ruijie.exp"
 TEMP_PATH="/tmp/auto_bak"
@@ -52,22 +52,19 @@ function first_run(){
 }
 # 交互函数
 function main(){
-    local HOMEDIR="${HOME}"
     local line
     local IFS=","
     local i=0
     local j
     local input_file=${1}
     # 判断是否是第一次执行
-    if [[ ! -f ~/.config_autobak.conf ]]; then
+    if [[ ! -f ${HOMEDIR}/.config_autobak.conf ]]; then
         echo "检测到第一次执行, 开始准备"
         first_run
         echo "现在需您确认您的配置信息, 请输入以下信息，若不清楚可直接回车"
         while :;do
             read -rp "请确认您传入文件信息正确：" -e -i "${input_file}" INPUT_FILE
-            if [[ -f $INPUT_FILE ]]; then
-                break
-            else
+            if [[ ! -f $INPUT_FILE ]]; then
                 echo -e "文件不存在, 请重新输入\n"
             fi
             # 获取文件后缀名
@@ -260,8 +257,10 @@ function main(){
             done
         fi
         echo "信息收集完毕，请确认！"
-        echo "xlsx文件位置：${INPUT_FILE}"
-        echo "xlsx sheet：$(sed -n "$((INPUT_SHEET+1))p" /tmp/sheet.tmp |awk -F'、' '{print $2}')"
+        echo "模板文件位置：${INPUT_FILE}"
+        if [[ ${file_suffix,,} == "xlsx" ]]; then
+            echo "xlsx sheet：$(sed -n "$((INPUT_SHEET+1))p" /tmp/sheet.tmp |awk -F'、' '{print $2}')"
+        fi
         echo "备份文件路径：${BAK_PATH}"
         echo "是否需要备份后自动压缩：${AUTO_COM}"
         echo "备份时间段：${CRON_TIME}"
@@ -272,27 +271,31 @@ function main(){
         echo
         read -rp "是否确认？[Y/n]：" -e -n 1 yn
         if [[ ${yn} == [Yy] || -z ${yn} ]]; then
-            echo "INPUT_FILE=${INPUT_FILE}" >> ~/.config_autobak.conf
-            echo "INPUT_SHEET=${INPUT_SHEET}" >> ~/.config_autobak.conf
-            echo "BAK_PATH=$(readlink -f $BAK_PATH)" >> ~/.config_autobak.conf
-            echo "AUTO_COM=${AUTO_COM}" >> ~/.config_autobak.conf
-            echo "CRON_TIME=\"${CRON_TIME}\"" >> ~/.config_autobak.conf
-            echo "Remote_Host_Key=${Remote_Host_Key}" >> ~/.config_autobak.conf
-            echo "Remote_User_Key=${Remote_User_Key}" >> ~/.config_autobak.conf
-            echo "Remote_Pass_Key=${Remote_Pass_Key}" >> ~/.config_autobak.conf
-            echo "Remote_Enable_Password_Key=${Remote_Enable_Password_Key}" >> ~/.config_autobak.conf
-            echo "Remote_Mode_Key=${Remote_Mode_Key}" >> ~/.config_autobak.conf
-            echo "Remote_Port_Key=${Remote_Port_Key}" >> ~/.config_autobak.conf
+            echo "INPUT_FILE=${INPUT_FILE}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "INPUT_SHEET=${INPUT_SHEET}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "BAK_PATH=$(readlink -f $BAK_PATH)" >> ${HOMEDIR}/.config_autobak.conf
+            echo "AUTO_COM=${AUTO_COM}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "CRON_TIME=\"${CRON_TIME}\"" >> ${HOMEDIR}/.config_autobak.conf
+            echo "Remote_Host_Key=${Remote_Host_Key}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "Remote_User_Key=${Remote_User_Key}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "Remote_Pass_Key=${Remote_Pass_Key}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "Remote_Enable_Password_Key=${Remote_Enable_Password_Key}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "Remote_Mode_Key=${Remote_Mode_Key}" >> ${HOMEDIR}/.config_autobak.conf
+            echo "Remote_Port_Key=${Remote_Port_Key}" >> ${HOMEDIR}/.config_autobak.conf
             echo "设置完毕！"
+            chmod a+r ${HOMEDIR}/.config_autobak.conf
             rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
         else
             rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
             exit 0
         fi
     else
-        source ~/.config_autobak.conf
+        source ${HOMEDIR}/.config_autobak.conf
+        file_suffix=${INPUT_FILE##*.}
         if [[ ${file_suffix,,} != "csv" ]]; then
             transform_xlsx_to_csv ${INPUT_FILE} ${TEMP_PATH}/data.csv
+        elif [[ ${file_suffix,,} == "csv" ]]; then
+            cp ${INPUT_FILE} ${TEMP_PATH}/data.csv
         fi
         deal_exp
         deal_file_line ${TEMP_PATH}/data.csv
@@ -304,7 +307,7 @@ function transform_xlsx_to_csv(){
     local xlsx_file_name=${1}
     local csv_file_name=${2}
     if [[ ! -x ${The_Script_Dir}/xlsx2csv ]]; then
-        sudo chmod +x ${The_Script_Dir}/xlsx2csv
+        chmod +x ${The_Script_Dir}/xlsx2csv
     fi
     if [[ ! -z ${sheet_name} ]]; then
         eval "${The_Script_Dir}/xlsx2csv -n ${sheet_name} ${xlsx_file_name} ${csv_file_name}"
@@ -368,7 +371,9 @@ function deal_file_line(){
     local i=0
     local j=0
     local IFS=","
-    if test ! -d ${TEMP_PATH}; then
+    if test -d ${TEMP_PATH}; then
+        rm -rf ${TEMP_PATH}/*
+    else
         mkdir -p ${TEMP_PATH}
     fi
     while read line 
@@ -422,17 +427,17 @@ function deal_file_line(){
             fi
         fi
         ping -c 1 -w 1 ${remote_ip} &>/dev/null
-        if [[ $? != 0 ]]; then
+        if [[ $? != 0 && $i != 1 ]]; then
             echo "第${i}行IP-${remote_ip}不可达"
             continue
         fi
         ${TEMP_PATH}/ruijie.exp ${remote_type} ${remote_ip} ${remote_user} ${remote_port} ${remote_passwd} ${remote_enable} tmp 1>/dev/null 2>&1
-        if [[ $? != 0 ]]; then
+        if [[ $? != 0 && $i != 1 ]]; then
             echo "第${i}行连接失败"
             continue
         fi
         mv tmp.log ${TEMP_PATH}/ruijie.log
-        hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | grep -v "hostname ")
+        hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | awk -F' ' '{print $2}')
         if [[ -z ${hostname} ]]; then
             hostname="ruijie"
         fi
@@ -453,9 +458,25 @@ function deal_file_line(){
         mv -r ${TEMP_PATH}/${TODAY_DATE} ${BAK_PATH}/
     fi
 }
-
-if [[ -f ~/.config_autobak.conf ]]; then
-    source ~/.config_autobak.conf
+deal_crond(){
+    if [[ ! -z ${CRON_TIME} ]]; then
+        crontab -l 2>/dev/null > ${TEMP_PATH}/crontab.txt
+        grep "bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
+        if test -z cat ${TEMP_PATH}/crontab.tmp; then
+            echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" 
+            (crontab -l 2>/dev/null; echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}") | crontab -
+        else
+            grep -v "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
+            echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" >> ${TEMP_PATH}/crontab.tmp
+            crontab -r
+            crontab ${TEMP_PATH}/crontab.tmp
+        fi
+        rm -f ${TEMP_PATH}/crontab.txt ${TEMP_PATH}/crontab.tmp
+    fi
+}
+if [[ -f ${HOMEDIR}/.config_autobak.conf ]]; then
+    source ${HOMEDIR}/.config_autobak.conf
 fi
 main ${1}
+deal_crond
 exit 0
