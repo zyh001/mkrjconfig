@@ -286,6 +286,7 @@ function main(){
             echo "Remote_Port_Key=${Remote_Port_Key}" >> ${HOMEDIR}/.config_autobak.conf
             echo "设置完毕！"
             chmod a+r ${HOMEDIR}/.config_autobak.conf
+            deal_crond
             rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
             echo "按回车键，将自动进行第一次备份工作，您也可以通过Ctrl-C结束运行，系统将在指定的时间自动进行备份！"
             read -s 
@@ -496,5 +497,4 @@ if [[ -f ${HOMEDIR}/.config_autobak.conf ]]; then
     source ${HOMEDIR}/.config_autobak.conf
 fi
 main ${1}
-deal_crond
 exit 0
