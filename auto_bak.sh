@@ -297,7 +297,7 @@ function main(){
         fi
     else
         source ${HOMEDIR}/.config_autobak.conf
-        if test -d ${TEMP_PATH}; then
+        if [[ -d ${TEMP_PATH} ]]; then
             rm -rf ${TEMP_PATH}/*
         else
             mkdir -p ${TEMP_PATH}
@@ -453,15 +453,20 @@ function deal_file_line(){
             fi
             hostname=$(echo ${hostname} | sed 's/\n//g')
             cat ${TEMP_PATH}/ruijie.log | sed -n '/^version/,/^end/p' >> "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
-            sed -i 's/\r//g' "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
+            sed -i 's/\r//g' "${TEMP_PATH}/${TODAY_DATE}/[${remote_ip}]${hostname}.text"
             echo "第$((i-1))行IP-${remote_ip}[${hostname}]备份成功"
         fi
     done < ${file_name}
     if [[ "${AUTO_COM}" == "true" ]]; then
         if [[ -d ${TEMP_PATH}/${TODAY_DATE} ]]; then
             cd ${TEMP_PATH}/${TODAY_DATE}
-            zip -r ${TODAY_DATE}.zip *
-            mv ./${TODAY_DATE}.zip ${BAK_PATH}/${TODAY_DATE}.zip
+            if type zip >/dev/null 2>&1; then
+                zip -q -r ${TODAY_DATE}.zip *
+                mv ./${TODAY_DATE}.zip ${BAK_PATH}/${TODAY_DATE}.zip
+            elif type tar >/dev/null 2>&1; then
+                tar -zcf ${TODAY_DATE}.tar.gz *
+                mv ./${TODAY_DATE}.tar.gz ${BAK_PATH}/${TODAY_DATE}.tar.gz
+            fi
             rm -rf ${TEMP_PATH}/${TODAY_DATE}
             cd -
         fi
@@ -479,10 +484,11 @@ deal_crond(){
         else
             grep -v "${CRON_TIME/\*/\\\*} bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
             echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" >> ${TEMP_PATH}/crontab.tmp
+            uniq -u ${TEMP_PATH}/crontab.tmp > ${TEMP_PATH}/crontab.tmp2
             crontab -r
-            crontab ${TEMP_PATH}/crontab.tmp >/dev/null 2>&1
+            crontab ${TEMP_PATH}/crontab.tmp2 >/dev/null 2>&1
         fi
-        rm -f ${TEMP_PATH}/crontab.txt ${TEMP_PATH}/crontab.tmp
+        rm -f ${TEMP_PATH}/crontab.txt ${TEMP_PATH}/crontab.tmp ${TEMP_PATH}/crontab.tmp2
     fi
 }
 if [[ -f ${HOMEDIR}/.config_autobak.conf ]]; then
