@@ -435,6 +435,9 @@ function deal_file_line(){
                 echo "第$((i-1))行IP-${remote_ip}不可达"
                 continue
             fi
+            if [[ -f tmp.log ]]; then
+                rm -f tmp.log
+            fi
             ${TEMP_PATH}/ruijie.exp ${remote_type} ${remote_ip} ${remote_user} ${remote_port} ${remote_passwd} ${remote_enable} tmp 1>/dev/null 2>&1
             if [[ $? != 0 ]]; then
                 echo "第$((i-1))行IP-${remote_ip}连接失败"
@@ -448,7 +451,9 @@ function deal_file_line(){
             if [[ ! -d ${TEMP_PATH}/${TODAY_DATE} ]]; then
                 mkdir -p ${TEMP_PATH}/${TODAY_DATE}
             fi
+            hostname=$(echo ${hostname} | sed 's/\n//g')
             cat ${TEMP_PATH}/ruijie.log | sed -n '/^version/,/end$/p' >> "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
+            sed -i 's/\r//g' "${TEMP_PATH}/${TODAY_DATE}/${hostname}[${remote_ip}].text"
             echo "第$((i-1))行IP-${remote_ip}[${hostname}]备份成功"
         fi
     done < ${file_name}
