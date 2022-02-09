@@ -367,6 +367,7 @@ function read_line_to_array() {
 # 处理exp文件
 function deal_exp(){
     cp -f ${REMOTE_TEMPORARY_FILE} ${TEMP_PATH}/ruijie.exp
+    echo "expect \"*#\" { send \"exit\\r\" }" >> ${TEMP_PATH}/ruijie.exp
     echo "expect \"*#\" { send \"show run\\r\" }" >> ${TEMP_PATH}/ruijie.exp
     echo "expect \"*#\" { send \"exit\\r\" }" >> ${TEMP_PATH}/ruijie.exp
     echo "expect eof" >> ${TEMP_PATH}/ruijie.exp
@@ -468,7 +469,7 @@ function deal_file_line(){
                 mv ./${TODAY_DATE}.tar.gz ${BAK_PATH}/${TODAY_DATE}.tar.gz
             fi
             rm -rf ${TEMP_PATH}/${TODAY_DATE}
-            cd -
+            cd - >/dev/null 2>&1
         fi
     else
         mv -r ${TEMP_PATH}/${TODAY_DATE} ${BAK_PATH}/
