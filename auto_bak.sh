@@ -93,6 +93,9 @@ function main(){
         done
         if [[ ${file_suffix,,} != "csv" ]]; then
             ${The_Script_Dir}/xlsx2csv list ${INPUT_FILE} > /tmp/sheet.txt
+            if [[ -f /tmp/sheet.tmp ]]; then
+                rm -f /tmp/sheet.tmp
+            fi
             while :;do
                 i=0
                 while read line 
@@ -134,9 +137,9 @@ function main(){
         done
         while :;do
             echo "请输入备份时间段，格式为crontab表达式，(可访问 https://www.gjk.cn/crontab 生成crontab表达式)"
-            read -rp "请输入[默认为每周一的0点进行执行]：" -e -i "0 0 * * 1" CRON_TIME
+            read -rp "请输入[默认为每周一的1点进行执行]：" -e -i "0 1 * * 1" CRON_TIME
             crontab -l 2>/dev/null >/tmp/crontab.tmp
-            echo "${CRON_TIME} -" | crontab -
+            echo "${CRON_TIME} echo" | crontab - 2>/dev/null
             if [[ $? != 0 ]]; then
                 echo -e "输入错误, 请输入正确的crontab表达式\n"
                 crontab -r 
@@ -286,7 +289,7 @@ function main(){
             echo "Remote_Port_Key=${Remote_Port_Key}" >> ${HOMEDIR}/.config_autobak.conf
             echo "设置完毕！"
             chmod a+r ${HOMEDIR}/.config_autobak.conf
-            deal_crond
+            deal_crond >/dev/null 2>&1
             rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
             echo "按回车键，将自动进行第一次备份工作，您也可以通过Ctrl-C结束运行，系统将在指定的时间自动进行备份！"
             read -s 
