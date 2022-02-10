@@ -496,5 +496,5 @@ deal_crond(){
 if [[ -f ${HOMEDIR}/.config_autobak.conf ]]; then
     source ${HOMEDIR}/.config_autobak.conf
 fi
-main ${1}
+main ${1} | tee "${TEMP_PATH}/${TODAY_DATE}/autobak.log"
 exit 0
