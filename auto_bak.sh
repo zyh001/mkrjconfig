@@ -117,7 +117,7 @@ function main(){
             done
         fi
         while :;do
-            read -rp "请输入备份文件路径: " -e -i "${HOMEDIR}/backup" BAK_PATH
+            read -rp "请输入备份文件路径: " -e -i "${HOMEDIR}/switch_bak" BAK_PATH
             if [[ -f ${BAK_PATH} ]]; then
                 echo -e "路径不能为文件, 请重新输入\n"
             else
@@ -462,10 +462,10 @@ function deal_file_line(){
             cd ${TEMP_PATH}/${TODAY_DATE}
             if type zip >/dev/null 2>&1; then
                 zip -q -r ${TODAY_DATE}.zip *
-                mv ./${TODAY_DATE}.zip ${BAK_PATH}/${TODAY_DATE}.zip
+                mv ./${TODAY_DATE}.zip "${BAK_PATH}/$(readlink -f ${BAK_PATH})_${TODAY_DATE}.zip"
             elif type tar >/dev/null 2>&1; then
                 tar -zcf ${TODAY_DATE}.tar.gz *
-                mv ./${TODAY_DATE}.tar.gz ${BAK_PATH}/${TODAY_DATE}.tar.gz
+                mv ./${TODAY_DATE}.tar.gz "${BAK_PATH}/$(readlink -f ${BAK_PATH})_${TODAY_DATE}.tar.gz"
             fi
             rm -rf ${TEMP_PATH}/${TODAY_DATE}
             cd - >/dev/null 2>&1
@@ -496,6 +496,7 @@ if [[ -f ${HOMEDIR}/.config_autobak.conf ]]; then
 fi
 if [[ -d ${TEMP_PATH} ]]; then
     rm -rf ${TEMP_PATH}/*
+    mkdir -p "${TEMP_PATH}/${TODAY_DATE}"
 else
     mkdir -p "${TEMP_PATH}/${TODAY_DATE}"
 fi
