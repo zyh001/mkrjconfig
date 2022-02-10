@@ -298,11 +298,6 @@ function main(){
         fi
     else
         source ${HOMEDIR}/.config_autobak.conf
-        if [[ -d ${TEMP_PATH} ]]; then
-            rm -rf ${TEMP_PATH}/*
-        else
-            mkdir -p ${TEMP_PATH}
-        fi
         file_suffix=${INPUT_FILE##*.}
         if [[ ${file_suffix,,} != "csv" ]]; then
             transform_xlsx_to_csv ${INPUT_FILE} ${TEMP_PATH}/data.csv
@@ -495,6 +490,11 @@ deal_crond(){
 }
 if [[ -f ${HOMEDIR}/.config_autobak.conf ]]; then
     source ${HOMEDIR}/.config_autobak.conf
+fi
+if [[ -d ${TEMP_PATH} ]]; then
+    rm -rf ${TEMP_PATH}/*
+else
+    mkdir -p "${TEMP_PATH}/${TODAY_DATE}"
 fi
 main ${1} | tee "${TEMP_PATH}/${TODAY_DATE}/autobak.log"
 exit 0
