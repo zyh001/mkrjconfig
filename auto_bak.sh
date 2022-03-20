@@ -293,6 +293,7 @@ function main(){
             rm -f /tmp/tmp.txt /tmp/tmp.csv /tmp/sheet.tmp /tmp/sheet.csv
             echo "按回车键，将自动进行第一次备份工作，您也可以通过Ctrl-C结束运行，系统将在指定的时间自动进行备份！"
             read -s 
+            echo "开始备份！"
             main
             exit 0
         else
@@ -446,7 +447,7 @@ function deal_file_line(){
             mv tmp.log ${TEMP_PATH}/ruijie.log
             hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | awk -F' ' '{print $2}')
             if [[ -z ${hostname} ]]; then
-                hostname="ruijie"
+                hostname="Ruijie"
             fi
             if [[ ! -d ${TEMP_PATH}/${TODAY_DATE} ]]; then
                 mkdir -p ${TEMP_PATH}/${TODAY_DATE}
@@ -462,10 +463,10 @@ function deal_file_line(){
             cd ${TEMP_PATH}/${TODAY_DATE}
             if type zip >/dev/null 2>&1; then
                 zip -q -r ${TODAY_DATE}.zip *
-                mv ./${TODAY_DATE}.zip "${BAK_PATH}/$(readlink -f ${BAK_PATH})_${TODAY_DATE}.zip"
+                mv ./${TODAY_DATE}.zip "$(readlink -f ${BAK_PATH})_${TODAY_DATE}.zip"
             elif type tar >/dev/null 2>&1; then
                 tar -zcf ${TODAY_DATE}.tar.gz *
-                mv ./${TODAY_DATE}.tar.gz "${BAK_PATH}/$(readlink -f ${BAK_PATH})_${TODAY_DATE}.tar.gz"
+                mv ./${TODAY_DATE}.tar.gz "$(readlink -f ${BAK_PATH})_${TODAY_DATE}.tar.gz"
             fi
             rm -rf ${TEMP_PATH}/${TODAY_DATE}
             cd - >/dev/null 2>&1
