@@ -463,10 +463,10 @@ function deal_file_line(){
             cd ${TEMP_PATH}/${TODAY_DATE}
             if type zip >/dev/null 2>&1; then
                 zip -q -r ${TODAY_DATE}.zip *
-                mv ./${TODAY_DATE}.zip "$(readlink -f ${BAK_PATH})_${TODAY_DATE}.zip"
+                mv ./${TODAY_DATE}.zip "$(readlink -f ${BAK_PATH})/${TODAY_DATE}.zip"
             elif type tar >/dev/null 2>&1; then
                 tar -zcf ${TODAY_DATE}.tar.gz *
-                mv ./${TODAY_DATE}.tar.gz "$(readlink -f ${BAK_PATH})_${TODAY_DATE}.tar.gz"
+                mv ./${TODAY_DATE}.tar.gz "$(readlink -f ${BAK_PATH})/${TODAY_DATE}.tar.gz"
             fi
             rm -rf ${TEMP_PATH}/${TODAY_DATE}
             cd - >/dev/null 2>&1

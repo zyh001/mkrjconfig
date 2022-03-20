@@ -10,7 +10,7 @@ set des [lindex $argv 6]
 
 log_file $des.log
 if {$mode == "ssh"} {
-    spawn ssh -p $port $user@$ip
+    spawn ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -p $port $user@$ip
 } else {
     spawn telnet $ip $port
 }
