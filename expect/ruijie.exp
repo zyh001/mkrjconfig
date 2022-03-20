@@ -16,6 +16,7 @@ if {$mode == "ssh"} {
 }
 expect {
     "*yes/no*" { send "yes\r"; exp_continue }
+    "*sername" { send "$user\r"; exp_continue }
     "*assword*" { send "$pass\r" }
 }
 expect {
