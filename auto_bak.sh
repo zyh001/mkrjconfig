@@ -447,9 +447,10 @@ function deal_file_line(){
                         echo "第$((i-1))行IP-${remote_ip}登录失败"
                         continue
                     fi
+                else
+                    echo "第$((i-1))行IP-${remote_ip}登录失败"
+                    continue
                 fi
-                echo "第$((i-1))行IP-${remote_ip}登录失败"
-                continue
             fi
             mv tmp.log ${TEMP_PATH}/ruijie.log
             hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | awk -F' ' '{print $2}' | head -n 1)
