@@ -441,11 +441,18 @@ function deal_file_line(){
             fi
             ${TEMP_PATH}/ruijie.exp ${remote_type} ${remote_ip} ${remote_user} ${remote_port} ${remote_passwd} ${remote_enable} tmp 1>/dev/null 2>&1
             if [[ $? != 0 ]]; then
-                echo "第$((i-1))行IP-${remote_ip}连接失败"
+                if [[ ${remote_type} == "ssh" ]]; then
+                    ${TEMP_PATH}/ruijie.exp ${remote_type} ${remote_ip} ${remote_user} ${remote_port} ${remote_passwd} ${remote_enable} tmp yes 1>/dev/null 2>&1
+                    if [[ $? != 0 ]]; then
+                        echo "第$((i-1))行IP-${remote_ip}登录失败"
+                        continue
+                    fi
+                fi
+                echo "第$((i-1))行IP-${remote_ip}登录失败"
                 continue
             fi
             mv tmp.log ${TEMP_PATH}/ruijie.log
-            hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | awk -F' ' '{print $2}')
+            hostname=$(cat ${TEMP_PATH}/ruijie.log | grep "hostname " | awk -F' ' '{print $2}' | head -n 1)
             if [[ -z ${hostname} ]]; then
                 hostname="Ruijie"
             fi
@@ -480,11 +487,21 @@ deal_crond(){
         crontab -l 2>/dev/null > ${TEMP_PATH}/crontab.txt
         grep "bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
         if [[ -z $(cat ${TEMP_PATH}/crontab.tmp) ]]; then
-            echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" 
-            (crontab -l 2>/dev/null; echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}") | crontab -
+            if [[ -z ${AUTO_BAK_FILE} ]]; then
+                echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" 
+                (crontab -l 2>/dev/null; echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}") | crontab -
+            else
+                echo "${CRON_TIME} bash $(readlink -f ${AUTO_BAK_FILE})" 
+                (crontab -l 2>/dev/null; echo "${CRON_TIME} bash $(readlink -f ${AUTO_BAK_FILE})") | crontab -
+            fi
         else
-            grep -v "${CRON_TIME/\*/\\\*} bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
-            echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" >> ${TEMP_PATH}/crontab.tmp
+            if [[ -z ${AUTO_BAK_FILE} ]]; then
+                grep -v "${CRON_TIME/\*/\\\*} bash ${The_Script_Dir}/${The_Script_Name}" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
+                echo "${CRON_TIME} bash ${The_Script_Dir}/${The_Script_Name}" >> ${TEMP_PATH}/crontab.tmp
+            else
+                grep -v "${CRON_TIME/\*/\\\*} bash $(readlink -f ${AUTO_BAK_FILE})" ${TEMP_PATH}/crontab.txt > ${TEMP_PATH}/crontab.tmp
+                echo "${CRON_TIME} bash $(readlink -f ${AUTO_BAK_FILE})" >> ${TEMP_PATH}/crontab.tmp
+            fi
             uniq -u ${TEMP_PATH}/crontab.tmp > ${TEMP_PATH}/crontab.tmp2
             crontab -r
             crontab ${TEMP_PATH}/crontab.tmp2 >/dev/null 2>&1

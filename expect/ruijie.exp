@@ -7,10 +7,15 @@ set port [lindex $argv 3]
 set pass [lindex $argv 4]
 set enpass [lindex $argv 5]
 set des [lindex $argv 6]
+set nokey [lindex $argv 7]
 
 log_file $des.log
 if {$mode == "ssh"} {
-    spawn ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -p $port $user@$ip
+    if {$nokey == "yes"} {
+        spawn ssh -p $port $user@$ip
+    } else {
+        spawn ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostkeyAlgorithms=+ssh-dss -c 3des-cbc -p $port $user@$ip
+    }
 } else {
     spawn telnet $ip $port
 }
