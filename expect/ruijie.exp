@@ -14,9 +14,7 @@ if {$mode == "ssh"} {
     if {$nokey == "yes"} {
         spawn ssh -p $port $user@$ip
     } else {
-        spawn ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostkeyAlgorithms=+ssh-dss -c 3des-cbc -p $port $user@$ip
-    } else {
-        spawn ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostkeyAlgorithms=+ssh-rsa -c 3des-cbc -p $port $user@$ip
+        spawn ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostkeyAlgorithms=+ssh-dss,ssh-rsa -c 3des-cbc -p $port $user@$ip
     }
 } else {
     spawn telnet $ip $port
